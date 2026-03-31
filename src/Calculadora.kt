@@ -1,56 +1,87 @@
+val pilha = mutableMapOf<Int, String>()
+var nivel = 0
+
 fun main() {
-    calcular()
+    val regex = Regex("^[0-9+\\-*/()]+$")
+
+    println("Digite sua expressão: ")
+    var exp = readln().replace(" ", "")
+
+    exp = exp.replace(Regex("(\\d)\\( "), "$1*(")
+    exp = exp.replace(Regex("\\)(\\d)"), ")*$1")
+
+    if (exp.length >= 9 && exp.matches(regex)) {
+        println("Expressão aceita.")
+    } else {
+        println("Expressão negada.")
+        return
+    }
+
+    var expTemporaria = ""
+    exp.forEach { c ->
+        when (c) {
+            '(' -> {
+                pilha[nivel] = pilha.getOrDefault(nivel, "") + expTemporaria
+                expTemporaria = ""
+                nivel++
+            }
+            ')' -> {
+                val resultadoNivel = calcularMatematica(expTemporaria)
+                nivel--
+                expTemporaria = pilha.getOrDefault(nivel, "") + resultadoNivel
+                pilha[nivel] = ""
+            }
+            else -> expTemporaria += c
+        }
+    }
+
+    val resultadoFinal = calcularMatematica(expTemporaria)
+    println("\nResultado final: $resultadoFinal")
 }
 
-fun calcular() {
-    println("Digite uma operação:")
-    val operacao = readln().replace(" ", "")
+fun calcularMatematica(expressao: String): String {
+    if (expressao.isBlank()) return "0"
 
-    if (operacao.contains("+")) {
-        val numeros = operacao.split('+')
-        var resultado = 0.0
+    val expLimpa = expressao.replace("++", "+").replace("--", "+").replace("+-", "-")
 
-        for (n in numeros) {
-            resultado += n.toDouble()
+    val tokens = mutableListOf<String>()
+    var numeroAcumulado = ""
+
+    expLimpa.forEach { c ->
+        if (c.isDigit() || c == '.') {
+            numeroAcumulado += c
+        } else {
+            if (numeroAcumulado.isNotEmpty()) tokens.add(numeroAcumulado)
+            tokens.add(c.toString())
+            numeroAcumulado = ""
         }
-
-        println("Resultado: $resultado")
     }
+    if (numeroAcumulado.isNotEmpty()) tokens.add(numeroAcumulado)
 
-    else if (operacao.contains("-")) {
-        val numeros = operacao.split('-')
-        var resultado = numeros[0].toDouble()
+    var i = 0
+    while (i < tokens.size) {
+        if (tokens[i] == "*" || tokens[i] == "/") {
+            val num1 = tokens[i - 1].toDouble()
+            val num2 = tokens[i + 1].toDouble()
+            val res = if (tokens[i] == "*") num1 * num2 else num1 / num2
 
-        for (i in 1 until numeros.size) {
-            resultado -= numeros[i].toDouble()
+            tokens[i - 1] = res.toString()
+            tokens.removeAt(i)
+            tokens.removeAt(i)
+            i--
         }
-
-        println("Resultado: $resultado")
+        i++
     }
 
-    else if (operacao.contains("*")) {
-        val numeros = operacao.split('*')
-        var resultado = 1.0
-
-        for (n in numeros) {
-            resultado *= n.toDouble()
-        }
-
-        println("Resultado: $resultado")
+    var resultado = tokens[0].toDouble()
+    i = 1
+    while (i < tokens.size) {
+        val op = tokens[i]
+        val proximoNum = tokens[i + 1].toDouble()
+        if (op == "+") resultado += proximoNum
+        if (op == "-") resultado -= proximoNum
+        i += 2
     }
 
-    else if (operacao.contains("/")) {
-        val numeros = operacao.split('/')
-        var resultado = numeros[0].toDouble()
-
-        for (i in 1 until numeros.size) {
-            resultado /= numeros[i].toDouble()
-        }
-
-        println("Resultado: $resultado")
-    }
-
-    else {
-        println("Operação inválida")
-    }
+    return resultado.toString()
 }
